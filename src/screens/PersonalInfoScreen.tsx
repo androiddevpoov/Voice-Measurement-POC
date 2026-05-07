@@ -13,13 +13,17 @@ import {
   MEASUREMENT_ROWS,
   applyFieldsToRows,
   buildFields,
+  buildFieldsColumnWise,
 } from '../data/sampleFields';
 import { useVoiceFlow } from '../hooks/useVoiceFlow';
 import type { Field, MeasurementRow } from '../types';
 
+type Direction = 'row' | 'col';
+
 const PersonalInfoScreen: React.FC = () => {
   const [rows, setRows] = useState<MeasurementRow[]>(MEASUREMENT_ROWS);
-  const [fields, setFields] = useState<Field[]>(buildFields(MEASUREMENT_ROWS));
+  const [direction, setDirection] = useState<Direction>('col');
+  const [fields, setFields] = useState<Field[]>(buildFieldsColumnWise(MEASUREMENT_ROWS));
   const [audioPrompts, setAudioPrompts] = useState(true); // Prompted by default
 
   // Sync voice engine's flat fields back onto the table rows
@@ -59,13 +63,32 @@ const PersonalInfoScreen: React.FC = () => {
     if (running) { stop(); } else { start(); }
   }, [running, start, stop]);
 
+  // Rebuild field order whenever direction changes (only allowed while stopped)
+  const onDirectionChange = useCallback((dir: Direction) => {
+    setDirection(dir);
+    const freshFields = dir === 'col'
+      ? buildFieldsColumnWise(rows)
+      : buildFields(rows);
+    setFields(freshFields);
+    setRows(r => applyFieldsToRows(r, freshFields));
+  }, [rows]);
+
   const onSave = useCallback(() => {
     console.log('[CompassTex] Save', rows);
   }, [rows]);
 
   const currentField = fields[currentIndex];
-  const currentRow   = Math.floor(currentIndex / 10) + 1;
-  const currentCol   = (currentIndex % 10) + 1;
+  // Position display adapts to traversal direction:
+  //   row-wise  → Row R · Col C of 10   (10 cols per row)
+  //   col-wise  → Col C · Row R of 11   (11 rows per col)
+  const NUM_ROWS = MEASUREMENT_ROWS.length; // 11
+  const NUM_COLS = 10;
+  const currentRow = direction === 'row'
+    ? Math.floor(currentIndex / NUM_COLS) + 1
+    : (currentIndex % NUM_ROWS) + 1;
+  const currentCol = direction === 'row'
+    ? (currentIndex % NUM_COLS) + 1
+    : Math.floor(currentIndex / NUM_ROWS) + 1;
 
   return (
     <ScrollView
@@ -113,7 +136,11 @@ const PersonalInfoScreen: React.FC = () => {
       {/* ── Active field indicator ───────────────────────── */}
       {running && currentField ? (
         <View style={styles.activeBox}>
-          <Text style={styles.activePos}>Row {currentRow}  ·  Col {currentCol} of 10</Text>
+          <Text style={styles.activePos}>
+            {direction === 'row'
+              ? `Row ${currentRow}  ·  Col ${currentCol} of ${NUM_COLS}`
+              : `Col ${currentCol}  ·  Row ${currentRow} of ${NUM_ROWS}`}
+          </Text>
           <Text style={styles.activeField}>{currentField.label}</Text>
         </View>
       ) : (
@@ -121,7 +148,7 @@ const PersonalInfoScreen: React.FC = () => {
           <Text style={styles.idleHint}>
             {audioPrompts
               ? '🔊 Prompted — app reads each field aloud'
-              : '⚡ Fast — speak values row by row, left to right'}
+              : '⚡ Fast — speak values in the selected direction'}
           </Text>
         </View>
       )}
@@ -143,6 +170,35 @@ const PersonalInfoScreen: React.FC = () => {
           <Text style={styles.errorTxt}>{errorMsg}</Text>
         </View>
       ) : null}
+
+      {/* ── Direction selector (locked while running) ───────── */}
+      {/* <View style={styles.dirSection}>
+        <Text style={styles.dirLabel}>Fill direction:</Text>
+        <View style={styles.dirRow}>
+          <Pressable
+            style={[styles.dirBtn, direction === 'row' && styles.dirBtnActive]}
+            onPress={() => onDirectionChange('row')}
+            disabled={running}>
+            <Text style={[styles.dirBtnTxt, direction === 'row' && styles.dirBtnTxtActive]}>
+              ➡ Row-wise
+            </Text>
+            <Text style={[styles.dirHint, direction === 'row' && styles.dirHintActive]}>
+              left → right, row by row
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.dirBtn, direction === 'col' && styles.dirBtnActive]}
+            onPress={() => onDirectionChange('col')}
+            disabled={running}>
+            <Text style={[styles.dirBtnTxt, direction === 'col' && styles.dirBtnTxtActive]}>
+              ⬇ Col-wise
+            </Text>
+            <Text style={[styles.dirHint, direction === 'col' && styles.dirHintActive]}>
+              top → bottom, col by col
+            </Text>
+          </Pressable>
+        </View>
+      </View>  */}
 
       {/* ── Start / Stop ─────────────────────────────────── */}
       <Pressable
@@ -181,7 +237,7 @@ const PersonalInfoScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  screen:  { flex: 1, backgroundColor: '#f1f5f9' },
+  screen: { flex: 1, backgroundColor: '#f1f5f9' },
   content: { padding: 12, paddingBottom: 80 },
 
   headerBar: {
@@ -189,7 +245,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start', marginBottom: 10,
     backgroundColor: '#0f172a', padding: 12, borderRadius: 8,
   },
-  brand:    { fontSize: 18, fontWeight: '800', color: '#f8fafc', letterSpacing: 1 },
+  brand: { fontSize: 18, fontWeight: '800', color: '#f8fafc', letterSpacing: 1 },
   subtitle: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
   headerActions: { flexDirection: 'row' },
   headerBtn: {
@@ -198,32 +254,32 @@ const styles = StyleSheet.create({
   },
   headerBtnText: { fontSize: 12, fontWeight: '700', color: '#f8fafc' },
 
-  modeRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
+  modeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
   modeLabel: { fontSize: 12, color: '#475569' },
   modeBtn: {
     flex: 1, paddingVertical: 7, borderRadius: 7,
     backgroundColor: '#e2e8f0', alignItems: 'center',
   },
-  modeBtnActive:   { backgroundColor: '#2563eb' },
-  modeBtnTxt:      { fontSize: 13, fontWeight: '600', color: '#475569' },
-  modeBtnTxtActive:{ color: '#fff' },
+  modeBtnActive: { backgroundColor: '#2563eb' },
+  modeBtnTxt: { fontSize: 13, fontWeight: '600', color: '#475569' },
+  modeBtnTxtActive: { color: '#fff' },
 
   activeBox: {
     backgroundColor: '#fff', padding: 10, borderRadius: 8,
     borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 8,
   },
-  activePos:   { fontSize: 10, color: '#64748b' },
+  activePos: { fontSize: 10, color: '#64748b' },
   activeField: { fontSize: 14, fontWeight: '700', color: '#1d4ed8', marginTop: 2 },
-  idleHint:    { fontSize: 12, color: '#94a3b8' },
+  idleHint: { fontSize: 12, color: '#94a3b8' },
 
   heardBox: {
     padding: 12, borderRadius: 8, backgroundColor: '#0f172a',
     minHeight: 58, marginBottom: 8,
   },
-  heardLabel:   { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: '#94a3b8', marginBottom: 3 },
+  heardLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: '#94a3b8', marginBottom: 3 },
   heardPartial: { fontSize: 18, color: '#60a5fa', fontStyle: 'italic' },
-  heardFinal:   { fontSize: 18, color: '#f8fafc', fontWeight: '600' },
-  heardEmpty:   { fontSize: 13, color: '#64748b' },
+  heardFinal: { fontSize: 18, color: '#f8fafc', fontWeight: '600' },
+  heardEmpty: { fontSize: 13, color: '#64748b' },
 
   errorBox: {
     backgroundColor: '#fef2f2', padding: 8, borderRadius: 6,
@@ -244,6 +300,21 @@ const styles = StyleSheet.create({
   },
   ctrlOff: { opacity: 0.4 },
   ctrlTxt: { fontSize: 11, color: '#0f172a', fontWeight: '600' },
+
+  // Direction selector
+  dirSection: { marginBottom: 8 },
+  dirLabel: { fontSize: 11, color: '#64748b', marginBottom: 4, fontWeight: '600' },
+  dirRow: { flexDirection: 'row', gap: 6 },
+  dirBtn: {
+    flex: 1, paddingVertical: 8, paddingHorizontal: 10,
+    borderRadius: 8, backgroundColor: '#e2e8f0',
+    alignItems: 'center', borderWidth: 1.5, borderColor: '#e2e8f0',
+  },
+  dirBtnActive: { backgroundColor: '#eff6ff', borderColor: '#2563eb' },
+  dirBtnTxt: { fontSize: 13, fontWeight: '700', color: '#475569' },
+  dirBtnTxtActive: { color: '#1d4ed8' },
+  dirHint: { fontSize: 10, color: '#94a3b8', marginTop: 2 },
+  dirHintActive: { color: '#3b82f6' },
 });
 
 export default PersonalInfoScreen;

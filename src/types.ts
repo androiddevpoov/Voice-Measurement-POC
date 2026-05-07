@@ -11,6 +11,7 @@ export interface MeasurementRow {
   id: string;
   label: string;        // shown in table
   spokenLabel: string;  // TTS-friendly version of label
+  shortForm: string;
   tolPlus: number;
   tolMinus: number;
   // S-size columns
