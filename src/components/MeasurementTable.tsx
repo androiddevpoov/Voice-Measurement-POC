@@ -35,11 +35,20 @@ const W_CELL    = 42;
 
 export const MeasurementTable: React.FC<Props> = ({
   rows,
+  fields,
   activeFieldIndex,
   isActive,
 }) => {
-  const activeRowIdx  = Math.floor(activeFieldIndex / CELLS_PER_ROW);
-  const activeColIdx  = activeFieldIndex % CELLS_PER_ROW;
+  // Derive active cell from the field's ID (e.g. "r3_sDiff1") so the highlight
+  // is correct for BOTH row-wise and column-wise traversal order.
+  const activeField  = fields[activeFieldIndex];
+  const activeRowIdx = activeField
+    ? rows.findIndex(r => r.id === activeField.id.split('_')[0])
+    : -1;
+  const activeColKey = activeField
+    ? (activeField.id.split('_').slice(1).join('_') as CellKey)
+    : null;
+  const activeColIdx = activeColKey ? CELL_ORDER.indexOf(activeColKey) : -1;
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator style={styles.outerScroll}>

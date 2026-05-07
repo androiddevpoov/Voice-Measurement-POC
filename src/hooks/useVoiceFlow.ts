@@ -169,7 +169,7 @@ export function useVoiceFlow({
         handledRef.current = false;
         partialRef.current = '';
         // onReady will set state back to 'listening' when mic reopens.
-      }, 400);
+      }, 150); // was 400ms
     },
   });
 
@@ -224,7 +224,7 @@ export function useVoiceFlow({
           if (!runningRef.current) return;
           handledRef.current = false;
           // Native side will restart mic; onReady will set state to 'listening'.
-        }, 300);
+        }, 120); // was 300ms
         return;
       }
 
@@ -233,7 +233,7 @@ export function useVoiceFlow({
         cp[idx] = { ...cp[idx], value: parsed };
         return cp;
       });
-      scheduleTimer(() => advance(), 80); // eslint-disable-line @typescript-eslint/no-use-before-define
+      scheduleTimer(() => advance(), 40); // was 80ms — advance sooner after value accepted // eslint-disable-line @typescript-eslint/no-use-before-define
     },
     // advance, goBack, speakField declared below — safe because scheduleTimer wraps calls
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -254,7 +254,7 @@ export function useVoiceFlow({
       // Silent mode: skip TTS entirely — mic opens after a brief 80ms transition.
       // Field label is shown on screen; operator speaks value immediately.
       setAppState('listening');
-      scheduleTimer(() => cv.resumeProcessing(), 80);
+      scheduleTimer(() => cv.resumeProcessing(), 30); // was 80ms — open mic faster in Fast mode
       return;
     }
 
@@ -282,14 +282,14 @@ export function useVoiceFlow({
       return;
     }
     setCurrentIndex(next);
-    scheduleTimer(() => speakField(next), 100);
+    scheduleTimer(() => speakField(next), 50); // was 100ms
   }, [cv, onComplete, speakField]);
 
   const goBack = useCallback(() => {
     clearPendingTimers();
     const prev = Math.max(0, indexRef.current - 1);
     setCurrentIndex(prev);
-    scheduleTimer(() => speakField(prev), 100);
+    scheduleTimer(() => speakField(prev), 50); // was 100ms
   }, [speakField]);
 
   // ------------------------------------------------------------------
@@ -300,7 +300,7 @@ export function useVoiceFlow({
 
     Tts.getInitStatus().then(
       () => {
-        Tts.setDefaultRate(0.42);
+        Tts.setDefaultRate(0.55);   // was 0.42 — faster prompts = less wait
         Tts.setDefaultPitch(1.0);
         Tts.setDefaultLanguage('en-IN').catch(() => Tts.setDefaultLanguage('en-US'));
         // Do NOT enable ducking — it suppresses TTS volume itself on some devices.
@@ -353,7 +353,7 @@ export function useVoiceFlow({
     cv.startSession(localeRef.current);
 
     // Let the recognizer warm up, then ask the first question.
-    scheduleTimer(() => speakField(0), 400);
+    scheduleTimer(() => speakField(0), 200); // was 400ms — mic warms up faster now
   }, [cv, speakField]);
 
   const stop = useCallback(async () => {
