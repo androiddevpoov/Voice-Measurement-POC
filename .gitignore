@@ -1,0 +1,75 @@
+# OSX
+.DS_Store
+*.orig
+
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+ios/.xcode.env.local
+
+# Android/IntelliJ
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx
+*.keystore
+!debug.keystore
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Ruby / CocoaPods
+vendor/
+Pods/
+.bundle/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Buck
+buck-out/
+\.buckd/
+*.keystore
+!debug.keystore
+
+# Jest
+coverage/
+
+# Flipper
+ios/Flipper/
+ios/.flipper/
+
+# Metro cache
+.metro-health-check*
+
+# Temporary files
+*.log
+tmp/
